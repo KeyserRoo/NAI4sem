@@ -1,56 +1,110 @@
 package util;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Observation {
-  private double[] attributes;
-  private int numberOfAttributes;
-  private String label;
+	private double[] attributes;
+	private String label;
 
-  public Observation(String line) {
-      try {
-          String[] elements = line.replace(",", ".").split("[\t]");
-          numberOfAttributes = elements.length - 1;
-          attributes = new double[numberOfAttributes];
-          for (int i = 0; i < numberOfAttributes; i++) {
-              attributes[i] = Float.parseFloat(elements[i]);
-          }
-          label = elements[elements.length - 1].trim();
-      } catch (Exception e) {
-          throw new IllegalArgumentException("Zle parametry!");
-      }
-  }
+	public Observation(double[] attributes, String label) {
+		this.attributes = attributes;
+		this.label = label;
+	}
 
-  public static Observation[] getData(Path path) throws IOException {
-      List<String> lines = Files.readAllLines(path);
-      Observation[] observations = new Observation[lines.size()];
+	public static List<Observation> getDataFromCSV(Path path) throws IOException {
+		List<String> lines = Files.readAllLines(path);
+		List<Observation> observations = new ArrayList<>();
 
-      for (int i = 0; i < observations.length; i++) {
-          observations[i] = new Observation(lines.get(i));
-      }
+		for (String line : lines) {
+			observations.add(processCSVLine(line));
+		}
 
-      return observations;
-  }
+		return observations;
+	}
 
-  @Override
-  public String toString() {
-      return "Observation [attributes=" + Arrays.toString(attributes) + ", label=" + label + "]";
-  }
+	public static List<Observation> getDataFromFolder(Path startPath) throws IOException {
+		List<Observation> observations = new ArrayList<>();
 
-  public double[] getAttributes() {
-      return attributes;
-  }
+		Files.walkFileTree(startPath, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				String language = file.getParent().getFileName().toString();
+				String content = new String(Files.readAllBytes(file));
 
-  public int getNumberOfAttributes() {
-      return numberOfAttributes;
-  }
+				observations.add(new Observation(stringToPercentages(content), language));
+				return FileVisitResult.CONTINUE;
+			}
+		});
 
-  public String getLabel() {
-      return label;
-  }
+		return observations;
+	}
 
+	@Override
+	public String toString() {
+		return "Observation [attributes=" + Arrays.toString(attributes) + ", label=" + label + "]";
+	}
+
+	public double[] getAttributes() {
+		return attributes;
+	}
+
+	public int getNumberOfAttributes() {
+		return attributes.length;
+	}
+
+	public String getLabel() {
+		return label;
+	}
+
+	private static Observation processCSVLine(String line) {
+		try {
+			String[] elements = line.replace(",", ".").split("[\t]");
+
+			int numOfAtt = elements.length - 1;
+			double[] attrib = new double[numOfAtt];
+			for (int i = 0; i < numOfAtt; i++) {
+				attrib[i] = Float.parseFloat(elements[i]);
+			}
+
+			String lab = elements[elements.length - 1].trim();
+
+			return new Observation(attrib, lab);
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Zle parametry!");
+		}
+	}
+
+	public static double[] stringToPercentages(String content) throws IOException {
+		String normalized = Normalizer.normalize(content, Normalizer.Form.NFD);
+		String noSpecialLetters = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+		String noL = noSpecialLetters.replaceAll("ł", "l");
+		String justLetters = noL.replaceAll("[^a-zA-Z]", "");
+		String finished = justLetters.toLowerCase();
+
+		int[] characters = new int[26];
+		double[] percentages = new double[26];
+
+		for (int i = 0; i < finished.length(); i++) {
+			characters[finished.charAt(i) - 'a']++;
+		}
+		int sum = 0;
+		for (int i = 0; i < characters.length; i++) {
+			sum += characters[i];
+		}
+		for (int i = 0; i < percentages.length; i++) {
+			String formatted = String.format("%.4f", ((double) characters[i] / sum));
+			percentages[i] = Double.parseDouble(formatted.replaceAll(",", "."));
+		}
+
+		return percentages;
+	}
 }

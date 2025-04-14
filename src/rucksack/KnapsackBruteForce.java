@@ -1,50 +1,53 @@
-// package rucksack;
+package rucksack;
 
-// import java.util.ArrayList;
-// import java.util.List;
+import java.util.ArrayList;
+import java.util.List;
 
-// public class KnapsackBruteForce extends Knapsack {
+public class KnapsackBruteForce extends Knapsack {
 
-// 	private int bestTotalValue = Integer.MIN_VALUE;
-// 	private int bestTotalSize = 0;
+	private int bestTotalValue = Integer.MIN_VALUE;
+	private int bestTotalSize = 0;
 
-// 	public KnapsackBruteForce(Data data) {
-// 			super(data);
-// 	}
+	public KnapsackBruteForce(Data data) {
+			super(data);
+	}
 
-// 	@Override
-// 	public void solveKnapsack(int n) {
-// 			List<Element> dataSet = data.getSetWithElements(n);
-// 			int capacity = data.getMaxWeight();
+	@Override
+	public void solveKnapsack(int n) {
+			List<Element> dataSet = data.getSetWithElements(n);
+			int capacity = data.getMaxWeight();
 
-// 			findOptimalSolution(dataSet, capacity, 0, new ArrayList<>(), 0, 0, new ArrayList<>());
-// 	}
+			List<int[]> bestSolution = new ArrayList<>();
+			findOptimalSolution(dataSet, capacity, 0, new ArrayList<>(), 0, 0, bestSolution);
 
-// 	private void findOptimalSolution(List<Element> dataSet, int capacity, int index, List<int[]> currentSelection, int currentTotalValue, int currentTotalSize, List<int[]> bestSolution) {
-// 			numberOfCombinationsChecked++;
+			items = bestSolution;
+			totalValue = bestTotalValue;
+			totalCapacity = bestTotalSize;
+	}
 
-// 			if (index == dataSet.size()) {
-// 					if (currentTotalSize > bestTotalSize || (currentTotalSize == bestTotalSize && currentTotalValue > bestTotalValue)) {
-// 							bestTotalValue = currentTotalValue;
-// 							bestTotalSize = currentTotalSize;
-// 							bestSolution.clear();
+	private void findOptimalSolution(List<Element> dataSet, int capacity, int index, List<int[]> currentSelection, int currentTotalValue, int currentTotalSize, List<int[]> bestSolution) {
+			numberOfCombinationsChecked++;
 
-// 							bestSolution.addAll(currentSelection);
-// 					}
-// 					return;
-// 			}
+			if (index == dataSet.size()) {
+					if (currentTotalValue > bestTotalValue) {
+							bestTotalValue = currentTotalValue;
+							bestTotalSize = currentTotalSize;
+							bestSolution.clear();
+							bestSolution.addAll(currentSelection);
+					}
+					return;
+			}
 
-// 			Element currentItem = dataSet.get(index);
-// 			int itemValue = currentItem.getValue();
-// 			int itemSize = currentItem.getSize();
+			Element currentItem = dataSet.get(index);
+			int itemValue = currentItem.getValue();
+			int itemSize = currentItem.getSize();
 
-// 			findOptimalSolution(dataSet, capacity, index + 1, currentSelection, currentTotalValue, currentTotalSize, bestSolution);
+			findOptimalSolution(dataSet, capacity, index + 1, currentSelection, currentTotalValue, currentTotalSize, bestSolution);
 
-// 			if (currentTotalSize + itemSize <= capacity) {
-// 					int[] toAdd = {itemSize,itemValue};
-// 					currentSelection.add(toAdd);
-// 					findOptimalSolution(dataSet, capacity, index + 1, currentSelection, currentTotalValue + itemValue, currentTotalSize + itemSize, bestSolution);
-// 					currentSelection.remove(index);
-// 			}
-// 	}
-// }
+			if (currentTotalSize + itemSize <= capacity) {
+					currentSelection.add(new int[] { index + 1, itemSize, itemValue });
+					findOptimalSolution(dataSet, capacity, index + 1, currentSelection, currentTotalValue + itemValue, currentTotalSize + itemSize, bestSolution);
+					currentSelection.remove(currentSelection.size() - 1);
+			}
+	}
+}

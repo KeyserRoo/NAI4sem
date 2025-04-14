@@ -2,179 +2,176 @@ package knn;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
 import util.Observation;
 
 public class knnApp {
-    public static void main(String[] args) throws IOException {
-        Observation[] test = Observation.getData(Paths.get("../data/iris/iris_test.txt"));
-        Observation[] training = Observation.getData(Paths.get("../data/iris/iris_training.txt"));
+	public static void main(String[] args) throws IOException {
+		List<Observation> test = Observation.getDataFromCSV(Paths.get("src/data/iris/iris_test.txt"));
+		List<Observation> training = Observation.getDataFromCSV(Paths.get("src/data/iris/iris_training.txt"));
 
-        Scanner scanner = new Scanner(System.in);
+		Scanner scanner = new Scanner(System.in);
 
-        while (true) {
-            System.out.println("Choose an option:");
-            System.out.println("1. Classify test data and calculate accuracy");
-            System.out.println("2. Manually classify a new observation");
-            System.out.println("3. Exit");
-            int choice = scanner.nextInt();
+		while (true) {
+			System.out.println("Choose an option:");
+			System.out.println("1. Classify test data and calculate accuracy");
+			System.out.println("2. Manually classify a new observation");
+			System.out.println("3. Exit");
+			int choice = scanner.nextInt();
 
-            if (choice == 1) {
-                classifyTestData(test, training);
-            } else if (choice == 2) {
-                userObservations(training);
-            } else if (choice == 3) {
-                System.out.println("Exiting...");
-                break;
-            } else {
-                System.out.println("Invalid choice. Try again.");
-            }
-        }
+			if (choice == 1) {
+				classifyTestData(test, training, scanner);
+			} else if (choice == 2) {
+				userObservations(training, scanner);
+			} else if (choice == 3) {
+				System.out.println("Exiting...");
+				break;
+			} else {
+				System.out.println("Invalid choice. Try again.");
+			}
+		}
 
-        scanner.close();
-    }
+		scanner.close();
+	}
 
-    public static void classifyTestData(Observation[] testData, Observation[] trainingData) {
-        int k = getK(trainingData);
-        int correctClassifications = 0;
+	public static void classifyTestData(List<Observation> testData, List<Observation> trainingData, Scanner scanner) {
+		int k = getK(trainingData, scanner);
+		int correctClassifications = 0;
 
-        for (Observation testObservation : testData) {
-            Observation[] nearestNeighbours = getNearestNeighbours(testObservation, trainingData, k);
-            String predictedLabel = getMostFrequentLabel(nearestNeighbours);
+		for (Observation testObservation : testData) {
+			List<Observation> nearestNeighbours = getNearestNeighbours(testObservation, trainingData, k);
+			String predictedLabel = getMostFrequentLabel(nearestNeighbours);
 
-            if (predictedLabel.equals(testObservation.getLabel())) {
-                correctClassifications++;
-            }
-        }
+			if (predictedLabel.equals(testObservation.getLabel())) {
+				correctClassifications++;
+			}
+		}
 
-        double accuracy = (double) correctClassifications / testData.length * 100;
-        System.out.println("Correct classifications: " + correctClassifications);
-        System.out.println("Accuracy: " + accuracy + "%");
-    }
+		double accuracy = (double) correctClassifications / testData.size() * 100;
+		System.out.println("Correct classifications: " + correctClassifications);
+		System.out.println("Accuracy: " + accuracy + "%");
+	}
 
-    public static String getMostFrequentLabel(Observation[] neighbours) {
-        HashMap<String, Integer> labelCounts = new HashMap<>();
+	public static String getMostFrequentLabel(List<Observation> neighbours) {
+		HashMap<String, Integer> labelCounts = new HashMap<>();
 
-        for (Observation neighbour : neighbours) {
-            labelCounts.put(
-                    neighbour.getLabel(),
-                    labelCounts.getOrDefault(neighbour.getLabel(), 0) + 1);
-        }
+		for (Observation neighbour : neighbours) {
+			labelCounts.put(
+					neighbour.getLabel(),
+					labelCounts.getOrDefault(neighbour.getLabel(), 0) + 1);
+		}
 
-        int maxOccureces = 0;
-        String toReturn = "";
+		int maxOccureces = 0;
+		String toReturn = "";
 
-        for (Map.Entry<String, Integer> pair : labelCounts.entrySet()) {
-            if (maxOccureces < pair.getValue()) {
-                maxOccureces = pair.getValue();
-                toReturn = pair.getKey();
-            }
-        }
+		for (Map.Entry<String, Integer> pair : labelCounts.entrySet()) {
+			if (maxOccureces < pair.getValue()) {
+				maxOccureces = pair.getValue();
+				toReturn = pair.getKey();
+			}
+		}
 
-        return toReturn;
-    }
+		return toReturn;
+	}
 
-    public static void userObservations(Observation[] trainingData) {
-        int k = getK(trainingData);
+	public static void userObservations(List<Observation> trainingData, Scanner scanner) {
+		int k = getK(trainingData, scanner);
 
-        try (Scanner scanner = new Scanner(System.in)) {
-            scanner.nextLine();
+		scanner.nextLine();
 
-            while (true) {
-                System.out.println("Enter a new observation with " + trainingData[0].getNumberOfAttributes()
-                        + " attributes (comma-separated), or type 'quit' to exit:");
-                String userLine = scanner.nextLine();
+		while (true) {
+			System.out.println("Enter a new observation with " + trainingData.get(0).getNumberOfAttributes()
+					+ " attributes (comma-separated), or type 'quit' to exit:");
+			String userLine = scanner.nextLine();
 
-                if (userLine.equalsIgnoreCase("quit")) {
-                    break;
-                }
+			if (userLine.equalsIgnoreCase("quit")) {
+				break;
+			}
 
-                try {
-                    Observation userObservation = new Observation(userLine);
-                    Observation[] nearestNeighbours = getNearestNeighbours(userObservation, trainingData, k);
-                    String predictedLabel = getMostFrequentLabel(nearestNeighbours);
+			try {
+				String[] elements = userLine.split(",");
+				double[] attrib = new double[elements.length - 1];
+				for (int i = 0; i < attrib.length; i++) {
+					attrib[i] = Double.parseDouble(elements[i]);
+				}
+				Observation userObservation = new Observation(attrib, elements[elements.length - 1]);
+				List<Observation> nearestNeighbours = getNearestNeighbours(userObservation, trainingData, k);
+				String predictedLabel = getMostFrequentLabel(nearestNeighbours);
 
-                    System.out.println("Predicted label: " + predictedLabel);
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Invalid input. Try again.");
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+				System.out.println("Predicted label: " + predictedLabel);
+			} catch (IllegalArgumentException e) {
+				System.out.println("Invalid input. Try again.");
+			}
+		}
+	}
 
-    }
+	private static int getK(List<Observation> data, Scanner scanner) {
+		int k = 0;
+		System.out.println("Enter k: ");
+		k = scanner.nextInt();
 
-    private static int getK(Observation[] data) {
-        int k = 0;
-        try (Scanner scanner = new Scanner(System.in)) {
-            System.out.println("Enter k: ");
-            k = scanner.nextInt();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		if (k < 1 || k > data.size()) {
+			System.out.println("Invalid k, setting to 3");
+			k = 3;
+		}
+		return k;
+	}
 
-        if (k < 1 || k > data.length) {
-            System.out.println("Invalid k, setting to 3");
-            k = 3;
-        }
-        return k;
-    }
+	private static List<Observation> getNearestNeighbours(Observation testedObservation, List<Observation> trainingData,
+			int k) {
+		List<ObservationDistance> distances = new ArrayList<>();
 
-    private static Observation[] getNearestNeighbours(Observation testedObservation, Observation[] trainingData,
-            int k) {
-        ObservationDistance[] distances = new ObservationDistance[trainingData.length];
+		for (Observation observation : trainingData) {
+			double distance = manhattanDistance(testedObservation, observation);
+			distances.add(new ObservationDistance(observation, distance));
+		}
 
-        for (int i = 0; i < trainingData.length; i++) {
-            double distance = manhattanDistance(testedObservation, trainingData[i]);
-            distances[i] = new ObservationDistance(trainingData[i], distance);
-        }
+		distances.sort((a, b) -> Double.compare(a.distance, b.distance));
 
-        Arrays.sort(distances, (a, b) -> Double.compare(a.distance, b.distance));
+		List<Observation> nearestNeighbours = new ArrayList<>();
+		for (int i = 0; i < k; i++) {
+			nearestNeighbours.add(distances.get(i).observation);
+		}
 
-        Observation[] nearestNeighbours = new Observation[k];
-        for (int i = 0; i < k; i++) {
-            nearestNeighbours[i] = distances[i].observation;
-        }
+		return nearestNeighbours;
+	}
 
-        return nearestNeighbours;
-    }
+	private static class ObservationDistance {
+		Observation observation;
+		double distance;
 
-    private static class ObservationDistance {
-        Observation observation;
-        double distance;
+		ObservationDistance(Observation observation, double distance) {
+			this.observation = observation;
+			this.distance = distance;
+		}
+	}
 
-        ObservationDistance(Observation observation, double distance) {
-            this.observation = observation;
-            this.distance = distance;
-        }
-    }
+	private static double euclideanDistance(Observation userObservation, Observation trainingData) {
+		double[] temp = new double[userObservation.getNumberOfAttributes()];
+		for (int i = 0; i < userObservation.getNumberOfAttributes(); i++)
+			temp[i] = Math.pow(userObservation.getAttributes()[i] - trainingData.getAttributes()[i], 2);
 
-    private static double euclideanDistance(Observation userObservation, Observation trainingData) {
-        double[] temp = new double[userObservation.getNumberOfAttributes()];
-        for (int i = 0; i < userObservation.getNumberOfAttributes(); i++)
-            temp[i] = Math.pow(userObservation.getAttributes()[i] - trainingData.getAttributes()[i], 2);
+		double distance = 0;
+		for (int i = 0; i < temp.length; i++)
+			distance += temp[i];
 
-        double distance = 0;
-        for (int i = 0; i < temp.length; i++)
-            distance += temp[i];
+		return Math.sqrt(distance);
+	}
 
-        return Math.sqrt(distance);
-    }
+	private static double manhattanDistance(Observation userObservation, Observation trainingData) {
+		double[] temp = new double[userObservation.getNumberOfAttributes()];
+		for (int i = 0; i < userObservation.getNumberOfAttributes(); i++)
+			temp[i] = Math.abs(userObservation.getAttributes()[i] - trainingData.getAttributes()[i]);
 
-    private static double manhattanDistance(Observation userObservation, Observation trainingData) {
-        double[] temp = new double[userObservation.getNumberOfAttributes()];
-        for (int i = 0; i < userObservation.getNumberOfAttributes(); i++)
-            temp[i] = Math.abs(userObservation.getAttributes()[i] - trainingData.getAttributes()[i]);
+		double distance = 0;
+		for (int i = 0; i < temp.length; i++)
+			distance += temp[i];
 
-        double distance = 0;
-        for (int i = 0; i < temp.length; i++)
-            distance += temp[i];
-
-        return distance;
-    }
+		return distance;
+	}
 }
